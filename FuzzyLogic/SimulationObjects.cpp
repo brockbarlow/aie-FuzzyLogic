@@ -40,6 +40,11 @@ Cave::Cave(glm::vec2 position):BaseResource(position,glm::vec4(0,0,0,1),20)
 	type = CAVE;
 }
 
+Enemy::Enemy(glm::vec2 position):BaseResource(position, glm::vec4(1,0,0,1),20)
+{
+	type = ENEMY;
+}
+
 Agent::Agent(glm::vec2 position) : BaseAgent(position, glm::vec4(1, 1, 0, 1), 20)
 {
 	tiredness = 1;
@@ -235,6 +240,25 @@ float Agent::checkDrinkingDesirable()
 
 }
 
+float Agent::checkRunDesirable()
+{
+	float desire = 0;
+	float enemyRange = findNearestResource(ENEMY);
+	float enemyRangeClose = fuzzyEngine.veryNear->getMembership(enemyRange);
+	float enemyRangeMedium = fuzzyEngine.mediumRange->getMembership(enemyRange);
+	float enemyRangeFar = fuzzyEngine.farAway->getMembership(enemyRange);
+	float veryDesirablevalue = enemyRangeClose;
+	float desirableValue = enemyRangeMedium;
+	float undesirableValue = enemyRangeFar;
+	float maxVeryDesirable = fuzzyEngine.veryDesirable->getMaxMembership();
+	float maxDesirable = fuzzyEngine.desirable->getMaxMembership();
+	float maxUndesirable = fuzzyEngine.undesirable->getMaxMembership();
+	desire = maxVeryDesirable*veryDesirablevalue + maxDesirable* desirableValue + maxUndesirable*undesirableValue;
+	desire /= (.1f + veryDesirablevalue + desirableValue + undesirableValue);
+	return desire;
+}
+
+
 glm::vec2 Agent::gotoFood(float desirability, float delta)
 {
 	glm::vec2 velocity = findResourceVector(FOOD) * delta * (1+desirability)*maxSpeed;
@@ -253,11 +277,19 @@ glm::vec2 Agent::gotoWater(float desirability, float delta)
 	return velocity;
 }
 
+glm::vec2 Agent::runEnemy(float desirability, float delta)
+{
+	glm::vec2 velocity = -glm::normalize(findResourceVector(ENEMY) - this->position) * delta * (1 + desirability) * maxSpeed;
+	return velocity;
+}
+
+
 void Agent::update(float delta)
 {
 	float eatDesirability = checkEatingDesirable();
 	float sleepDesirability = checkSleepDesirable();
 	float drinkDesirability = checkDrinkingDesirable();
+	float runDesirability = checkRunDesirable();
 	glm::vec2 velocity;
 	if(eatDesirability>sleepDesirability && eatDesirability>drinkDesirability)
 	{
@@ -271,10 +303,14 @@ void Agent::update(float delta)
 	{
 		velocity = gotoWater(drinkDesirability,delta);
 	}
-	if (findNearestResource(ENEMY) < 50)
+	if (runDesirability > 0.15f)
+	{
+		velocity += runEnemy(runDesirability, delta);
+	}
+	/*if (findNearestResource(ENEMY) < 50)
 	{
 		velocity = glm::normalize(this->position);
-	}
+	}*/
 	position += velocity;
 	//if we are near water then drink
 	if(findNearestResource(WATER) <2)
@@ -335,146 +371,159 @@ void Agent::update(float delta)
 	}
 }
 
-Enemy::Enemy(glm::vec2 position) : BaseAgent(position, glm::vec4(1, 1, 0, 1), 20)
-{
-	follow = 0;
-	type = ENEMY;
-	maxSpeed = 150;
-}
-
-void Enemy::draw()
-{
-	BaseAgent::draw();
-}
-
-float Enemy::checkAgentDesireable()
-{
-	float desire = 0;
-	float playerRange = findNearestResource(SIMPLE_AI);
-
-	float listen = fuzzyEngine.listen->getMembership(follow);
-	float stalk = fuzzyEngine.stalk->getMembership(follow);
-	float attack = fuzzyEngine.attack->getMembership(follow);
-
-	float playerRangeClose = fuzzyEngine.veryNear->getMembership(playerRange);
-	float playerRangeMedium = fuzzyEngine.mediumRange->getMembership(playerRange);
-	float playerRangeFar = fuzzyEngine.farAway->getMembership(playerRange);
-
-	float veryDesirableValue = Fuzzy::OR(Fuzzy::AND(playerRangeClose, stalk), attack);
-	float desirableValue = Fuzzy::AND(Fuzzy::NOT(playerRangeFar), stalk);
-	float undesirableValue = listen;
-
-	float maxVeryDesirable = fuzzyEngine.veryDesirable->getMaxMembership();
-	float maxDesirable = fuzzyEngine.desirable->getMaxMembership();
-	float maxUndesirable = fuzzyEngine.undesirable->getMaxMembership();
-
-	desire = maxVeryDesirable*veryDesirableValue + maxDesirable* desirableValue + maxUndesirable*undesirableValue;
-	desire /= (.1f + veryDesirableValue + desirableValue + undesirableValue);
-	return desire;
-}
-
-float Enemy::findNearestAgent(WorldObjectType type)
-{
-	float minDistance = 1000000;
-	for (auto object : *worldObjects)
-	{
-		if (object->type == type)
-		{
-			float distance = glm::length(object->position - position);
-			if (distance < minDistance)
-			{
-				minDistance = distance;
-			}
-		}
-	}
-	return minDistance;
-}
-
-glm::vec2 Enemy::findAgentVector(WorldObjectType type)
-{
-	float minDistance = 1000000;
-	glm::vec2 agent;
-	for (auto object : *worldObjects)
-	{
-		if (object->type == type)
-		{
-			float distance = glm::length(object->position - position);
-			if (distance < minDistance)
-			{
-				minDistance = distance;
-				agent = object->position;
-			}
-		}
-	}
-	glm::vec2 vector;
-	if (minDistance<1)
-	{
-		vector = glm::vec2(0, 0);
-	}
-	else
-	{
-		vector = (agent - position) / minDistance;
-	}
-	return vector;
-}
-
-glm::vec2 Enemy::gotoAgent(float desirability, float delta)
-{
-	glm::vec2 velocity = findAgentVector(SIMPLE_AI) * delta * (1 + desirability) * maxSpeed;
-	return velocity;
-}
-
-void Enemy::update(float delta)
-{
-	float agentDesirability = checkAgentDesireable();
-	glm::vec2 velocity;
-	float mag;
-
-	for (auto object : *worldObjects)
-	{
-		if (object->type == WorldObjectType::SIMPLE_AI)
-		{
-			glm::vec2 displacement = object->position - this->position;
-			mag = glm::length(displacement);
-		}
-	}
-
-	if (agentDesirability > 0.7)
-	{
-		this->maxSpeed = 100;
-		velocity = gotoAgent(agentDesirability, delta);
-	}
-	else if (agentDesirability < 0.7)
-	{
-		this->maxSpeed = 150;
-		velocity = glm::vec2(0, 0);
-	}
-
-	position += velocity;
-
-	if (mag < 300 && mag > 51)
-	{
-		follow += delta * .3f;
-	}
-	else
-	{
-		follow -= delta * .3f;
-	}
-
-	if (follow < 0)
-	{
-		follow = 0;
-	}
-	if (follow > 1)
-	{
-		follow = 1;
-	}
-}
+//Enemy::Enemy(glm::vec2 position) : BaseAgent(position, glm::vec4(1, 1, 0, 1), 20)
+//{
+//	follow = 0;
+//	type = ENEMY;
+//	maxSpeed = 150;
+//}
+//
+//void Enemy::draw()
+//{
+//	BaseAgent::draw();
+//}
+//
+//float Enemy::checkAgentDesireable()
+//{
+//	float desire = 0;
+//	float playerRange = findNearestResource(SIMPLE_AI);
+//
+//	float listen = fuzzyEngine.listen->getMembership(follow);
+//	float stalk = fuzzyEngine.stalk->getMembership(follow);
+//	float attack = fuzzyEngine.attack->getMembership(follow);
+//
+//	float playerRangeClose = fuzzyEngine.veryNear->getMembership(playerRange);
+//	float playerRangeMedium = fuzzyEngine.mediumRange->getMembership(playerRange);
+//	float playerRangeFar = fuzzyEngine.farAway->getMembership(playerRange);
+//
+//	float veryDesirableValue = Fuzzy::OR(Fuzzy::AND(playerRangeClose, stalk), attack);
+//	float desirableValue = Fuzzy::AND(Fuzzy::NOT(playerRangeFar), stalk);
+//	float undesirableValue = listen;
+//
+//	float maxVeryDesirable = fuzzyEngine.veryDesirable->getMaxMembership();
+//	float maxDesirable = fuzzyEngine.desirable->getMaxMembership();
+//	float maxUndesirable = fuzzyEngine.undesirable->getMaxMembership();
+//
+//	desire = maxVeryDesirable*veryDesirableValue + maxDesirable* desirableValue + maxUndesirable*undesirableValue;
+//	desire /= (.1f + veryDesirableValue + desirableValue + undesirableValue);
+//	return desire;
+//}
+//
+//float Enemy::findNearestAgent(WorldObjectType type)
+//{
+//	float minDistance = 1000000;
+//	for (auto object : *worldObjects)
+//	{
+//		if (object->type == type)
+//		{
+//			float distance = glm::length(object->position - position);
+//			if (distance < minDistance)
+//			{
+//				minDistance = distance;
+//			}
+//		}
+//	}
+//	return minDistance;
+//}
+//
+//glm::vec2 Enemy::findAgentVector(WorldObjectType type)
+//{
+//	float minDistance = 1000000;
+//	glm::vec2 agent;
+//	for (auto object : *worldObjects)
+//	{
+//		if (object->type == type)
+//		{
+//			float distance = glm::length(object->position - position);
+//			if (distance < minDistance)
+//			{
+//				minDistance = distance;
+//				agent = object->position;
+//			}
+//		}
+//	}
+//	glm::vec2 vector;
+//	if (minDistance<1)
+//	{
+//		vector = glm::vec2(0, 0);
+//	}
+//	else
+//	{
+//		vector = (agent - position) / minDistance;
+//	}
+//	return vector;
+//}
+//
+//glm::vec2 Enemy::gotoAgent(float desirability, float delta)
+//{
+//	glm::vec2 velocity = findAgentVector(SIMPLE_AI) * delta * (1 + desirability) * maxSpeed;
+//	return velocity;
+//}
+//
+//void Enemy::update(float delta)
+//{
+//	float agentDesirability = checkAgentDesireable();
+//	glm::vec2 velocity;
+//	float mag;
+//
+//	for (auto object : *worldObjects)
+//	{
+//		if (object->type == WorldObjectType::SIMPLE_AI)
+//		{
+//			glm::vec2 displacement = object->position - this->position;
+//			mag = glm::length(displacement);
+//		}
+//	}
+//
+//	if (agentDesirability > 0.7)
+//	{
+//		this->maxSpeed = 100;
+//		velocity = gotoAgent(agentDesirability, delta);
+//	}
+//	else if (agentDesirability < 0.7)
+//	{
+//		this->maxSpeed = 150;
+//		velocity = glm::vec2(0, 0);
+//	}
+//
+//	position += velocity;
+//
+//	if (mag < 300 && mag > 51)
+//	{
+//		follow += delta * .3f;
+//	}
+//	else
+//	{
+//		follow -= delta * .3f;
+//	}
+//
+//	if (follow < 0)
+//	{
+//		follow = 0;
+//	}
+//	if (follow > 1)
+//	{
+//		follow = 1;
+//	}
+//}
 
 void WorldController::update(float delta)
 {
 	for(auto worldObject:worldObjects)
 	{
+		if (worldObject->type == ENEMY)
+			{
+				WorldObject* agent;
+				for (auto wO : worldObjects)
+					{
+						if (wO->type == SIMPLE_AI)
+							{
+								agent = wO;
+								break;
+							}
+					}
+				worldObject->position += 1.0f * glm::normalize(agent->position - worldObject->position);
+			}
 		worldObject->update(delta);
 	}
 }

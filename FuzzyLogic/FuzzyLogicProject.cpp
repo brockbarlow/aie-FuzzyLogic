@@ -53,7 +53,7 @@ void FuzzyProject::FuzzyLogicExample()
 	worldController->addObject(cave);
 	Food* food = new Food(glm::vec2(300, 600));
 	worldController->addObject(food);
-	Enemy* enemy = new Enemy(glm::vec2(1000, 400));
+	Enemy* enemy = new Enemy(glm::vec2(500, 600));
 	worldController->addObject(enemy);
 
 	//the following code sets up all the membership functions for the fuzzy sets
@@ -74,9 +74,9 @@ void FuzzyProject::FuzzyLogicExample()
 	fuzzyEngine.thirsty = new TriangleFunction(0.3f, 0.5f, 0.7f, "thristy");
 	fuzzyEngine.notThirsty = new rightShoulderMembershipFunction(.5f, .7f, "not thirsty");
 
-	fuzzyEngine.listen = new leftShoulderMembershipFunction(0.0f, 3.0f, "listen");
+	/*fuzzyEngine.listen = new leftShoulderMembershipFunction(0.0f, 3.0f, "listen");
 	fuzzyEngine.stalk = new TrapezoidFunction(2.0f, 4.0f, 7.0f, 9.0f, "stalk");
-	fuzzyEngine.attack = new rightShoulderMembershipFunction(8.0f, 10.0f, "attack");
+	fuzzyEngine.attack = new rightShoulderMembershipFunction(8.0f, 10.0f, "attack");*/
 
 	//membership functions for the distance set
 	fuzzyEngine.veryNear = new leftShoulderMembershipFunction(2, 4, "very close");
