@@ -29,6 +29,7 @@
     <ClCompile Include="src\UtilitySystemApplication.cpp" />
     <ClCompile Include="src\UtilityValue.cpp" />
     <ClCompile Include="src\World.cpp" />
+    <ClCompile Include="UtilityNPC.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\BaseApplication.h" />
@@ -41,6 +42,7 @@
     <ClInclude Include="src\UtilitySystemApplication.h" />
     <ClInclude Include="src\UtilityValue.h" />
     <ClInclude Include="src\World.h" />
+    <ClInclude Include="UtilityNPC.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{63494F4E-79FA-48AD-AA6C-BDF1FF1619FD}</ProjectGuid>

@@ -10,6 +10,11 @@
 
 #include "World.h"
 #include "BaseNPC.h"
+#include "../UtilityNPC.h"
+
+namespace UtilitySystem {
+	class UtilityNPC;
+}
 
 using glm::vec3;
 using glm::vec4;
@@ -36,7 +41,8 @@ bool UtilitySystemApplication::startup() {
 	m_camera->setLookAtFrom(vec3(10, 10, 10), vec3(0));
 	
 	m_pWorld = new World();
-	m_pNPC = new BaseNPC(m_pWorld);
+	m_pNPC = new UtilitySystem::UtilityNPC(m_pWorld);
+	//m_pNPC = new BaseNPC(m_pWorld);
 
 	return true;
 }
