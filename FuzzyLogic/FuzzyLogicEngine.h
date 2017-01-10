@@ -70,6 +70,10 @@ public:
 	TriangleFunction* thirsty;
 	rightShoulderMembershipFunction* notThirsty;
 
+	leftShoulderMembershipFunction* listen;
+	TrapezoidFunction* stalk;
+	rightShoulderMembershipFunction* attack;
+
 	leftShoulderMembershipFunction* veryNear;
 	TrapezoidFunction* mediumRange;
 	rightShoulderMembershipFunction* farAway;

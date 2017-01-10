@@ -5,6 +5,7 @@
 enum WorldObjectType
 {
 	SIMPLE_AI,
+	ENEMY,
 	WATER,
 	FOOD,
 	CAVE,
@@ -76,6 +77,20 @@ public:
 	glm::vec2 gotoFood(float desirability,float delta);
 	glm::vec2 gotoCave(float desirability,float delta);
 	glm::vec2 gotoWater(float desirability,float delta);
+};
+
+class Enemy : public BaseAgent
+{
+public:
+	float follow;
+	float maxSpeed;
+	virtual void update(float delta);
+	virtual void draw();
+	Enemy(glm::vec2 position);
+	float checkAgentDesireable();
+	float findNearestAgent(WorldObjectType type);
+	glm::vec2 findAgentVector(WorldObjectType type);
+	glm::vec2 gotoAgent(float desirability, float delta);
 };
 
 class WorldController
